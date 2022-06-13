@@ -20,7 +20,7 @@ def send_random_traffic(num_packets, interface, src_ip, dst_ip):
             p = p/UDP(sport= 50000, dport=port)/Raw(load=data)
             sendp(p, iface = interface, inter = 0.01)
             total_pkts += 1
-    print "Sent %s packets in total" % total_pkts
+    print ("Sent %s packets in total" % total_pkts)
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
