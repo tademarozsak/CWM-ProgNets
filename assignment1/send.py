@@ -7,7 +7,7 @@ import random, string
 
 def randomword(max_length):
     length = random.randint(22, max_length)
-    return ''.join(random.choice(string.lowercase) for i in range(int(length)))
+    return ''.join(random.choice(string.ascii_lowercase) for i in range(int(length)))
 
 def send_random_traffic(num_packets, interface, src_ip, dst_ip):
     dst_mac = "00:00:00:00:00:01"
