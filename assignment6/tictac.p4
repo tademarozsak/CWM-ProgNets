@@ -23,11 +23,12 @@
  * 4 is an ASCII Letter '4' (0x34)
  * Version is currently 0.1 (0x01)
  * Op is an operation to Perform:
- *   '+' (0x2b) Result = OperandA + OperandB
- *   '-' (0x2d) Result = OperandA - OperandB
- *   '&' (0x26) Result = OperandA & OperandB
- *   '|' (0x7c) Result = OperandA | OperandB
- *   '^' (0x5e) Result = OperandA ^ OperandB
+ *   'a' (0x61) 
+ *   'b' (0x62) 
+ *   'c' (0x63) 
+ *   '1' (0x31) 
+ *   '2' (0x32) 
+ *   '3' (0x33) 
  *
  * The device receives a packet, performs the requested operation, fills in the
  * result and sends the packet back out of the same port it came in on, while
@@ -57,23 +58,23 @@ header ethernet_t {
  * This is a custom protocol header for the calculator. We'll use
  * ethertype 0x1234 for is (see parser)
  */
-const bit<16> P4CALC_ETYPE = 0x1234;
-const bit<8>  P4CALC_P     = 0x50;   // 'P'
-const bit<8>  P4CALC_4     = 0x34;   // '4'
-const bit<8>  P4CALC_VER   = 0x01;   // v0.1
-const bit<8>  P4CALC_PLUS  = 0x2b;   // '+'
-const bit<8>  P4CALC_MINUS = 0x2d;   // '-'
-const bit<8>  P4CALC_AND   = 0x26;   // '&'
-const bit<8>  P4CALC_OR    = 0x7c;   // '|'
-const bit<8>  P4CALC_CARET = 0x5e;   // '^'
+const bit<16> TICTAC_ETYPE = 0x1234;
+const bit<8>  TICTAC_P     = 0x50;   // 'P'
+const bit<8>  TICTAC_4     = 0x34;   // '4'
+const bit<8>  TICTAC_VER   = 0x01;   // v0.1
+const bit<8>  TICTAC_PLUS  = 0x2b;   // '+'
+const bit<8>  TICTAC_MINUS = 0x2d;   // '-'
+const bit<8>  TICTAC_AND   = 0x26;   // '&'
+const bit<8>  TICTAC_OR    = 0x7c;   // '|'
+const bit<8>  TICTAC_CARET = 0x5e;   // '^'
 
-header p4calc_t {
+header tictac_t {
     bit<8>  p;
     bit<8>  four;
     bit<8>  ver;
     bit<8>  op;
-    bit<32> operand_a;
-    bit<32> operand_b;
+    bit<32> coord1;
+    bit<32> coord2;
     bit<32> res;
 }
 
@@ -84,7 +85,7 @@ header p4calc_t {
  */
 struct headers {
     ethernet_t   ethernet;
-    p4calc_t     p4calc;
+    tictac_t     tictac;
 }
 
 /*
@@ -109,22 +110,22 @@ parser MyParser(packet_in packet,
     state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            P4CALC_ETYPE : check_p4calc;
+            TICTAC_ETYPE : check_tictac;
             default      : accept;
         }
     }
 
-    state check_p4calc {
-        transition select(packet.lookahead<p4calc_t>().p,
-        packet.lookahead<p4calc_t>().four,
-        packet.lookahead<p4calc_t>().ver) {
-            (P4CALC_P, P4CALC_4, P4CALC_VER) : parse_p4calc;
+    state check_tictac {
+        transition select(packet.lookahead<tictac_t>().p,
+        packet.lookahead<tictac_t>().four,
+        packet.lookahead<tictac_t>().ver) {
+            (TICTAC_P, TICTAC_4, TICTAC_VER) : parse_tictac;
             default                          : accept;
         }
     }
 
-    state parse_p4calc {
-        packet.extract(hdr.p4calc);
+    state parse_tictac {
+        packet.extract(hdr.tictac);
         transition accept;
     }
 }
@@ -148,7 +149,7 @@ control MyIngress(inout headers hdr,
         bit<48> tmp;
 
         /* Put the result back in */
-        hdr.p4calc.res = result;
+        hdr.tictac.res = result;
 
         /* Swap the MAC addresses */
         tmp = hdr.ethernet.dstAddr;
@@ -160,23 +161,23 @@ control MyIngress(inout headers hdr,
     }
 
     action operation_add() {
-        send_back(hdr.p4calc.operand_a + hdr.p4calc.operand_b);
+        send_back(hdr.tictac.coord1 + hdr.tictac.coord2);
     }
 
     action operation_sub() {
-        send_back(hdr.p4calc.operand_a - hdr.p4calc.operand_b);
+        send_back(hdr.tictac.coord1 - hdr.tictac.coord2);
     }
 
     action operation_and() {
-        send_back(hdr.p4calc.operand_a & hdr.p4calc.operand_b);
+        send_back(hdr.tictac.coord1 & hdr.tictac.coord2);
     }
 
     action operation_or() {
-        send_back(hdr.p4calc.operand_a | hdr.p4calc.operand_b);
+        send_back(hdr.tictac.coord1 | hdr.tictac.coord2);
     }
 
     action operation_xor() {
-        send_back(hdr.p4calc.operand_a ^ hdr.p4calc.operand_b);
+        send_back(hdr.tictac.coord1 ^ hdr.tictac.coord2);
     }
 
     action operation_drop() {
@@ -185,7 +186,7 @@ control MyIngress(inout headers hdr,
 
     table calculate {
         key = {
-            hdr.p4calc.op        : exact;
+            hdr.tictac.op        : exact;
         }
         actions = {
             operation_add;
@@ -197,17 +198,17 @@ control MyIngress(inout headers hdr,
         }
         const default_action = operation_drop();
         const entries = {
-            P4CALC_PLUS : operation_add();
-            P4CALC_MINUS: operation_sub();
-            P4CALC_AND  : operation_and();
-            P4CALC_OR   : operation_or();
-            P4CALC_CARET: operation_xor();
+            TICTAC_PLUS : operation_add();
+            TICTAC_MINUS: operation_sub();
+            TICTAC_AND  : operation_and();
+            TICTAC_OR   : operation_or();
+            TICTAC_CARET: operation_xor();
         }
     }
 
 
     apply {
-        if (hdr.p4calc.isValid()) {
+        if (hdr.tictac.isValid()) {
             calculate.apply();
         } else {
             operation_drop();
@@ -238,7 +239,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.p4calc);
+        packet.emit(hdr.tictac);
     }
 }
 
