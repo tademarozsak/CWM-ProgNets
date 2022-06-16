@@ -18,6 +18,7 @@ import time
 class tictac(Packet):
     name = "tictac"
     fields_desc = [ IntField("user_input", 0),
+                    IntField("new_game", 0),
                     IntField("is_valid", 0),
                     IntField("field0", 0),
                     IntField("field1", 0),
