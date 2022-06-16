@@ -17,6 +17,7 @@ import readline
 class tictac(Packet):
     name = "tictac"
     fields_desc = [ IntField("user_input", 0),
+                    IntField("new_game", 0),
                     IntField("is_valid", 0),
                     IntField("field0", 0),
                     IntField("field1", 0),
@@ -44,14 +45,20 @@ def main():
         print(s)
 
         try:
-            s = int(s)
-            if isinstance(s, int) and s>=0 and s<=8:            
-                pkt = Ether(dst='00:04:00:00:00:00', type=0x1234) / tictac(user_input=s)
+            if s == "new" or s == "reset":
+                pkt = Ether(dst='00:04:00:00:00:00', type=0x1234) / tictac(new_game=1)
                 pkt = pkt/' '
                 pkt.show()
                 resp = srp1(pkt, iface=iface, timeout=1, verbose=False)
             else:
-                print("Invalid input. Enter a number between 0 and 9")
+                s = int(s)
+                if isinstance(s, int) and s>=0 and s<=8:            
+                    pkt = Ether(dst='00:04:00:00:00:00', type=0x1234) / tictac(user_input=s, new_game=0)
+                    pkt = pkt/' '
+                    pkt.show()
+                    resp = srp1(pkt, iface=iface, timeout=1, verbose=False)
+                else:
+                    print("Invalid input. Enter a number between 0 and 9")
         except Exception as error:
             print(error)
 
