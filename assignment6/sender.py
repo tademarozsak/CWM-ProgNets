@@ -17,6 +17,7 @@ import readline
 class tictac(Packet):
     name = "tictac"
     fields_desc = [ IntField("user_input", 0),
+                    IntField("is_valid", 0),
                     IntField("field0", 0),
                     IntField("field1", 0),
                     IntField("field2", 0),
@@ -25,8 +26,7 @@ class tictac(Packet):
                     IntField("field5", 0),
                     IntField("field6", 0),
                     IntField("field7", 0),
-                    IntField("field8", 0),
-                    IntField("is_valid", 0)]
+                    IntField("field8", 0)]
 
 bind_layers(Ether, tictac, type=0x1234)
 
