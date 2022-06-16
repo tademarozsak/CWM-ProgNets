@@ -25,7 +25,8 @@ class tictac(Packet):
                     IntField("field5", 0),
                     IntField("field6", 0),
                     IntField("field7", 0),
-                    IntField("field8", 0)]
+                    IntField("field8", 0),
+                    IntField("is_valid", 0)]
 
 bind_layers(Ether, tictac, type=0x1234)
 
@@ -43,13 +44,14 @@ def main():
         print(s)
 
         try:
-            if isinstance(s, int) and s>=1 and s<=10:            
+            s = int(s)
+            if isinstance(s, int) and s>=0 and s<=8:            
                 pkt = Ether(dst='00:04:00:00:00:00', type=0x1234) / tictac(user_input=s)
                 pkt = pkt/' '
                 pkt.show()
                 resp = srp1(pkt, iface=iface, timeout=1, verbose=False)
             else:
-                print("Invalid input. Enter a number between 1 and 9")
+                print("Invalid input. Enter a number between 0 and 9")
         except Exception as error:
             print(error)
 
