@@ -1,43 +1,5 @@
 /* -*- P4_16 -*- */
 
-/*
- * P4 Calculator
- *
- * This program implements a simple protocol. It can be carried over Ethernet
- * (Ethertype 0x1234).
- *
- * The Protocol header looks like this:
- *
- *        0                1                  2              3
- * +----------------+----------------+----------------+---------------+
- * |      P         |       4        |     Version    |     Op        |
- * +----------------+----------------+----------------+---------------+
- * |                              Operand A                           |
- * +----------------+----------------+----------------+---------------+
- * |                              Operand B                           |
- * +----------------+----------------+----------------+---------------+
- * |                              Result                              |
- * +----------------+----------------+----------------+---------------+
- *
- * P is an ASCII Letter 'P' (0x50)
- * 4 is an ASCII Letter '4' (0x34)
- * Version is currently 0.1 (0x01)
- * Op is an operation to Perform:
- *   'a' (0x61) 
- *   'b' (0x62) 
- *   'c' (0x63) 
- *   '1' (0x31) 
- *   '2' (0x32) 
- *   '3' (0x33) 
- *
- * The device receives a packet, performs the requested operation, fills in the
- * result and sends the packet back out of the same port it came in on, while
- * swapping the source and destination addresses.
- *
- * If an unknown operation is specified or the header is not valid, the packet
- * is dropped
- */
-
 #include <core.p4>
 #include <v1model.p4>
 
@@ -59,23 +21,21 @@ header ethernet_t {
  * ethertype 0x1234 for is (see parser)
  */
 const bit<16> TICTAC_ETYPE = 0x1234;
-const bit<8>  TICTAC_P     = 0x50;   // 'P'
-const bit<8>  TICTAC_4     = 0x34;   // '4'
-const bit<8>  TICTAC_VER   = 0x01;   // v0.1
-const bit<8>  TICTAC_PLUS  = 0x2b;   // '+'
-const bit<8>  TICTAC_MINUS = 0x2d;   // '-'
-const bit<8>  TICTAC_AND   = 0x26;   // '&'
-const bit<8>  TICTAC_OR    = 0x7c;   // '|'
-const bit<8>  TICTAC_CARET = 0x5e;   // '^'
+const bit<8>  TICTAC_X     = 0x58;   // 'x'
+const bit<8>  TICTAC_O     = 0x4F;   // 'O'
+
 
 header tictac_t {
-    bit<8>  p;
-    bit<8>  four;
-    bit<8>  ver;
-    bit<8>  op;
-    bit<32> coord1;
-    bit<32> coord2;
-    bit<32> res;
+    int<32>  user_input;
+    bit<32>  field0;
+    bit<32>  field1;
+    bit<32>  field2;
+    bit<32>  field3;
+    bit<32>  field4;
+    bit<32>  field5;
+    bit<32>  field6;
+    bit<32>  field7;
+    bit<32>  field8;
 }
 
 /*
@@ -95,8 +55,18 @@ struct headers {
  * because it is done "by the architecture", i.e. outside of P4 functions
  */
 
+register<bit<32>>(9) matrix;
+
 struct metadata {
-    /* In our case it is empty */
+    bit<32>  field0;
+    bit<32>  field1;
+    bit<32>  field2;
+    bit<32>  field3;
+    bit<32>  field4;
+    bit<32>  field5;
+    bit<32>  field6;
+    bit<32>  field7;
+    bit<32>  field8;
 }
 
 /*************************************************************************
@@ -110,17 +80,8 @@ parser MyParser(packet_in packet,
     state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            TICTAC_ETYPE : check_tictac;
+            TICTAC_ETYPE : parse_tictac;
             default      : accept;
-        }
-    }
-
-    state check_tictac {
-        transition select(packet.lookahead<tictac_t>().p,
-        packet.lookahead<tictac_t>().four,
-        packet.lookahead<tictac_t>().ver) {
-            (TICTAC_P, TICTAC_4, TICTAC_VER) : parse_tictac;
-            default                          : accept;
         }
     }
 
@@ -145,75 +106,59 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    action send_back(bit<32> result) {
-        bit<48> tmp;
 
-        /* Put the result back in */
-        hdr.tictac.res = result;
-
-        /* Swap the MAC addresses */
-        tmp = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
-        hdr.ethernet.srcAddr = tmp;
-
-        /* Send the packet back to the port it came from */
-        standard_metadata.egress_spec = standard_metadata.ingress_port;
+    if (user_input == 0) {
+        matrix.write(0, TICTAC_X);
+    } else if (user_input == 1) {
+        matrix.write(1, TICTAC_X);
+    } else if (user_input == 2) {
+        matrix.write(2, TICTAC_X);
+    } else if (user_input == 3) {
+        matrix.write(3, TICTAC_X);
+    } else if (user_input == 4) {
+        matrix.write(4, TICTAC_X);
+    } else if (user_input == 5) {
+        matrix.write(5, TICTAC_X);
+    } else if (user_input == 6) {
+        matrix.write(6, TICTAC_X);
+    } else if (user_input == 7) {
+        matrix.write(7, TICTAC_X);
+    } else if (user_input == 8) {
+        matrix.write(8, TICTAC_X);
     }
 
-    action operation_add() {
-        send_back(hdr.tictac.coord1 + hdr.tictac.coord2);
-    }
+    matrix.read(meta.field0, 0);
+    matrix.read(meta.field1, 1);
+    matrix.read(meta.field2, 2);
+    matrix.read(meta.field3, 3);
+    matrix.read(meta.field4, 4);
+    matrix.read(meta.field5, 5);
+    matrix.read(meta.field6, 6);
+    matrix.read(meta.field7, 7);
+    matrix.read(meta.field8, 8);
 
-    action operation_sub() {
-        send_back(hdr.tictac.coord1 - hdr.tictac.coord2);
-    }
+    /* Put the result back in */
+    hdr.tictac.field0 = meta.field0;
+    hdr.tictac.field1 = meta.field1;
+    hdr.tictac.field2 = meta.field2;
+    hdr.tictac.field3 = meta.field3;
+    hdr.tictac.field4 = meta.field4;
+    hdr.tictac.field5 = meta.field5;
+    hdr.tictac.field6 = meta.field6;
+    hdr.tictac.field7 = meta.field7;
+    hdr.tictac.field8 = meta.field8;
 
-    action operation_and() {
-        send_back(hdr.tictac.coord1 & hdr.tictac.coord2);
-    }
+    bit<48> tmp;
 
-    action operation_or() {
-        send_back(hdr.tictac.coord1 | hdr.tictac.coord2);
-    }
+    /* Swap the MAC addresses */
+    tmp = hdr.ethernet.dstAddr;
+    hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
+    hdr.ethernet.srcAddr = tmp;
 
-    action operation_xor() {
-        send_back(hdr.tictac.coord1 ^ hdr.tictac.coord2);
-    }
+    /* Send the packet back to the port it came from */
+    standard_metadata.egress_spec = standard_metadata.ingress_port;
 
-    action operation_drop() {
-        mark_to_drop(standard_metadata);
-    }
-
-    table calculate {
-        key = {
-            hdr.tictac.op        : exact;
-        }
-        actions = {
-            operation_add;
-            operation_sub;
-            operation_and;
-            operation_or;
-            operation_xor;
-            operation_drop;
-        }
-        const default_action = operation_drop();
-        const entries = {
-            TICTAC_PLUS : operation_add();
-            TICTAC_MINUS: operation_sub();
-            TICTAC_AND  : operation_and();
-            TICTAC_OR   : operation_or();
-            TICTAC_CARET: operation_xor();
-        }
-    }
-
-
-    apply {
-        if (hdr.tictac.isValid()) {
-            calculate.apply();
-        } else {
-            operation_drop();
-        }
-    }
+    
 }
 
 /*************************************************************************
