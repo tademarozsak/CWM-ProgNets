@@ -27,6 +27,7 @@ const bit<32>  TICTAC_O     = 2;   // 'O'
 
 header tictac_t {
     int<32>  user_input;
+    bit<32>  new_game;
     bit<32>  is_valid;
     bit<32>  field0;
     bit<32>  field1;
@@ -113,7 +114,17 @@ control MyIngress(inout headers hdr,
 
 	apply{
 	    if (meta.flag == 1){
-        
+        if (hdr.tictac.new_game = 1){
+            matrix.write(0, 0);
+            matrix.write(1, 0);
+            matrix.write(2, 0);
+            matrix.write(3, 0);
+            matrix.write(4, 0);
+            matrix.write(5, 0);
+            matrix.write(6, 0);
+            matrix.write(7, 0);
+            matrix.write(8, 0);
+        } else {
         matrix.read(current_value, input);
 	    if (current_value == 0){
 
@@ -221,6 +232,7 @@ control MyIngress(inout headers hdr,
         }
         else{
             hdr.tictac.is_valid = 0;
+        }
         }
 	    }
     }
