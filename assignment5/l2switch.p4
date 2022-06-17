@@ -51,11 +51,8 @@ parser MyParser(packet_in packet,
                 inout metadata meta,
                 inout standard_metadata_t standard_metadata) {
 
-	state start {
+	    state start {
 	        /* TODO: add parser logic */
-		transition ethernet_parser;
-	    }
-	    state ethernet_parser {
 		packet.extract(hdr.ethernet);
 		transition select(hdr.ethernet.etherType) {
 		    TYPE_IPV4 : ipv4_parser;
@@ -116,7 +113,7 @@ control MyIngress(inout headers hdr,
          */
          if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
-        }
+        } else {drop();}
     }
 }
 
