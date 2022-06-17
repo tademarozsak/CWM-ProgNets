@@ -26,7 +26,7 @@ const bit<32>  TICTAC_O     = 2;   // 'O'
 
 
 header tictac_t {
-    int<32>  user_input;
+    bit<32>  user_input;
     bit<32>  new_game;
     bit<32>  is_valid;
     bit<32>  field0;
@@ -58,7 +58,6 @@ struct headers {
  */
 
 register<bit<32>>(9) matrix;
-
 
 
 struct metadata {
@@ -113,8 +112,9 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
 	apply{
-	    if (meta.flag == 1){
-        if (hdr.tictac.new_game = 1){
+	if (meta.flag == 1){
+	//If new game is to start, set registers to 0:
+        if (hdr.tictac.new_game == 1){
             matrix.write(0, 0);
             matrix.write(1, 0);
             matrix.write(2, 0);
@@ -124,104 +124,104 @@ control MyIngress(inout headers hdr,
             matrix.write(6, 0);
             matrix.write(7, 0);
             matrix.write(8, 0);
-        } else {
-        matrix.read(current_value, input);
-	    if (current_value == 0){
-
             hdr.tictac.is_valid = 1;
-            /*
-            matrix.read(meta.field0, 0);
-            matrix.read(meta.field1, 1);
-            matrix.read(meta.field2, 2);
-            matrix.read(meta.field3, 3);
-            matrix.read(meta.field4, 4);
-            matrix.read(meta.field5, 5);
-            matrix.read(meta.field6, 6);
-            matrix.read(meta.field7, 7);
-            matrix.read(meta.field8, 8);
-            
-            
-            if (hdr.tictac.user_input == 0) {
-                matrix.write(0, TICTAC_X);
-            } else if (hdr.tictac.user_input == 1) {
-                matrix.write(1, TICTAC_X);
-            } else if (hdr.tictac.user_input == 2) {
-                matrix.write(2, TICTAC_X);
-            } else if (hdr.tictac.user_input == 3) {
-                matrix.write(3, TICTAC_X);
-            } else if (hdr.tictac.user_input == 4) {
-                matrix.write(4, TICTAC_X);
-            } else if (hdr.tictac.user_input == 5) {
-                matrix.write(5, TICTAC_X);
-            } else if (hdr.tictac.user_input == 6) {
-                matrix.write(6, TICTAC_X);
-            } else if (hdr.tictac.user_input == 7) {
-                matrix.write(7, TICTAC_X);
-            } else if (hdr.tictac.user_input == 8) {
-                matrix.write(8, TICTAC_X);
-            }
-            */
-
+        } else {
+        //Otherwise update table with the moves:
+        //Read value from the field marked by the player into current_value to see if it's allowed:
+        bit<32> current_value=0;
+	matrix.read(current_value, hdr.tictac.user_input);
+        //If allowed:
+	    if (current_value == 0){
+	    //Tell python program that the move was valid:
+            hdr.tictac.is_valid = 1;
+            //And change table accordingly, executing the player's request:
             matrix.write(hdr.tictac.user_input, TICTAC_X);
 
             
-            matrix.read(meta.field0, 0);
-            matrix.read(meta.field1, 1);
-            matrix.read(meta.field2, 2);
-            matrix.read(meta.field3, 3);
-            matrix.read(meta.field4, 4);
-            matrix.read(meta.field5, 5);
-            matrix.read(meta.field6, 6);
-            matrix.read(meta.field7, 7);
-            matrix.read(meta.field8, 8);
-            
             //AI HERE:
             
-            if (meta.field0 == 0) {
-                matrix.write(0, TICTAC_O);
-            } else if (meta.field1 == 0) {
-                matrix.write(1, TICTAC_O);
-            } else if (meta.field2 == 0) {
-                matrix.write(2, TICTAC_O);
-            } else if (meta.field3 == 0) {
-                matrix.write(3, TICTAC_O);
-            } else if (meta.field4 == 0) {
-                matrix.write(4, TICTAC_O);
-            } else if (meta.field5 == 0) {
-                matrix.write(5, TICTAC_O);
-            } else if (meta.field6 == 0) {
-                matrix.write(6, TICTAC_O);
-            } else if (meta.field7 == 0) {
-                matrix.write(7, TICTAC_O);
-            } else if (meta.field8 == 0) {
-                matrix.write(8, TICTAC_O);
+            bit<32> try_field;
+            bit<32> chosen_field;
+            bit<1> isAIdone = 0;
+            
+            //AI tries a few random fields, if any is empty, it will mark the first:
+            
+            random(try_field, 0, 8);
+            matrix.read(chosen_field, try_field);
+            if (isAIdone == 0 && chosen_field == 0){
+            	matrix.write(try_field, TICTAC_O);
+            	isAIdone = 1;
             }
+            random(try_field, 0, 8);
+            matrix.read(chosen_field, try_field);
+            if (isAIdone == 0 && chosen_field == 0){
+            	matrix.write(try_field, TICTAC_O);
+            	isAIdone = 1;
+            }
+            random(try_field, 0, 8);
+            matrix.read(chosen_field, try_field);
+            if (isAIdone == 0 && chosen_field == 0){
+            	matrix.write(try_field, TICTAC_O);
+            	isAIdone = 1;
+            }
+            random(try_field, 0, 8);
+            matrix.read(chosen_field, try_field);
+            if (isAIdone == 0 && chosen_field == 0){
+            	matrix.write(try_field, TICTAC_O);
+            	isAIdone = 1;
+            }
+            // If AI didn't manage to guess a random field correctly, choose the first empty one:
+            if (isAIdone == 0){	
+	    	    //Load the table into metadata for easier manipulation:
+	    	    matrix.read(meta.field0, 0);
+		    matrix.read(meta.field1, 1);
+		    matrix.read(meta.field2, 2);
+		    matrix.read(meta.field3, 3);
+		    matrix.read(meta.field4, 4);
+		    matrix.read(meta.field5, 5);
+		    matrix.read(meta.field6, 6);
+		    matrix.read(meta.field7, 7);
+		    matrix.read(meta.field8, 8);
+	    	    //Fill in the first empty field:
+	    	    if (meta.field0 == 0) {
+			matrix.write(0, TICTAC_O);
+		    } else if (meta.field1 == 0) {
+			matrix.write(1, TICTAC_O);
+		    } else if (meta.field2 == 0) {
+			matrix.write(2, TICTAC_O);
+		    } else if (meta.field3 == 0) {
+			matrix.write(3, TICTAC_O);
+		    } else if (meta.field4 == 0) {
+			matrix.write(4, TICTAC_O);
+		    } else if (meta.field5 == 0) {
+			matrix.write(5, TICTAC_O);
+		    } else if (meta.field6 == 0) {
+			matrix.write(6, TICTAC_O);
+		    } else if (meta.field7 == 0) {
+			matrix.write(7, TICTAC_O);
+		    } else if (meta.field8 == 0) {
+			matrix.write(8, TICTAC_O);
+		    }
+            }
+            
 
-            matrix.read(meta.field0, 0);
-            matrix.read(meta.field1, 1);
-            matrix.read(meta.field2, 2);
-            matrix.read(meta.field3, 3);
-            matrix.read(meta.field4, 4);
-            matrix.read(meta.field5, 5);
-            matrix.read(meta.field6, 6);
-            matrix.read(meta.field7, 7);
-            matrix.read(meta.field8, 8);
             
 
             /* Put the result back in */
-            hdr.tictac.field0 = meta.field0;
-            hdr.tictac.field1 = meta.field1;
-            hdr.tictac.field2 = meta.field2;
-            hdr.tictac.field3 = meta.field3;
-            hdr.tictac.field4 = meta.field4;
-            hdr.tictac.field5 = meta.field5;
-            hdr.tictac.field6 = meta.field6;
-            hdr.tictac.field7 = meta.field7;
-            hdr.tictac.field8 = meta.field8;
+            matrix.read(hdr.tictac.field0, 0);
+            matrix.read(hdr.tictac.field1, 1);
+            matrix.read(hdr.tictac.field2, 2);
+            matrix.read(hdr.tictac.field3, 3);
+            matrix.read(hdr.tictac.field4, 4);
+            matrix.read(hdr.tictac.field5, 5);
+            matrix.read(hdr.tictac.field6, 6);
+            matrix.read(hdr.tictac.field7, 7);
+            matrix.read(hdr.tictac.field8, 8);
 
-            bit<48> tmp;
+            
 
             /* Swap the MAC addresses */
+            bit<48> tmp;
             tmp = hdr.ethernet.dstAddr;
             hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
             hdr.ethernet.srcAddr = tmp;
@@ -230,6 +230,7 @@ control MyIngress(inout headers hdr,
             standard_metadata.egress_spec = standard_metadata.ingress_port;
 
         }
+        //If the player has marked an already occupied field, set the is_valid header to mark invalidness (0)
         else{
             hdr.tictac.is_valid = 0;
         }
